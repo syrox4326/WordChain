@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#46178F">
+<title>%OG_TITLE%</title>
+<meta name="description" content="%OG_DESC%">
+<link rel="canonical" href="%OG_URL%">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WordChain">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:title" content="%OG_TITLE%">
+<meta property="og:description" content="%OG_DESC%">
+<meta property="og:url" content="%OG_URL%">
+<meta property="og:image" content="%ORIGIN%/icons/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="application-name" content="WordChain">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="WordChain">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/montserrat-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<noscript><p class="noscript">WordChain'i oynamak için tarayıcında JavaScript açık olmalı.</p></noscript>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+<div id="banner" class="banner" hidden>Bağlantı koptu, yeniden bağlanılıyor…</div>
+<div id="alerts" class="alerts" aria-live="polite"></div>
+
+<!-- Ana sayfa -->
+<main id="home" class="screen" hidden>
+  <h1 class="wordmark" aria-label="WordChain"></h1>
+  <p class="tagline">Sırayla kelime zinciri kur. Süre dolmadan yeni kelimeyi bul.</p>
+
+  <form id="createForm" class="card" autocomplete="off">
+    <h2>Oda kur</h2>
+    <div class="namerow">
+      <button type="button" class="avbtn" id="avCreate" aria-label="Avatarını seç"></button>
+      <div class="field">
+        <label for="nameCreate">Adın</label>
+        <input id="nameCreate" class="txt" type="text" maxlength="16" autocomplete="nickname" placeholder="Takma adın" required>
+      </div>
+    </div>
+    <fieldset class="field">
+      <legend>Kaç kişi oynayacak?</legend>
+      <div class="chips" id="maxSeg" role="group" aria-label="Oyuncu sayısı">
+        <button type="button" data-n="2" aria-pressed="false">2</button>
+        <button type="button" data-n="3" aria-pressed="false">3</button>
+        <button type="button" data-n="4" aria-pressed="true">4</button>
+        <button type="button" data-n="5" aria-pressed="false">5</button>
+        <button type="button" data-n="6" aria-pressed="false">6</button>
+      </div>
+    </fieldset>
+    <div class="field">
+      <label for="turnRange">Düşünme süresi</label>
+      <div class="stepper">
+        <button type="button" id="turnMinus" aria-label="Süreyi azalt">−</button>
+        <output id="turnOut" for="turnRange">45<small>sn</small></output>
+        <button type="button" id="turnPlus" aria-label="Süreyi artır">+</button>
+      </div>
+      <input id="turnRange" type="range" min="30" max="180" step="5" value="45">
+      <div class="rangeends"><span>30 sn</span><span>180 sn</span></div>
+    </div>
+    <label class="switchrow" for="dictCheck">
+      <span><b>Sözlük kontrolü</b><small>Sözlükte olmayan kelime kabul edilmez. Yazan kişi elenmez, yeniden dener.</small></span>
+      <span class="switch"><input id="dictCheck" type="checkbox" checked><span class="knob"></span></span>
+    </label>
+    <button class="btn green" type="submit">Oda kur</button>
+  </form>
+
+  <form id="codeForm" class="joinline" autocomplete="off">
+    <input id="codeInput" class="txt" type="text" maxlength="5" placeholder="ODA KODU" aria-label="Oda kodu" autocapitalize="characters">
+    <button class="btn white" type="submit">Katıl</button>
+  </form>
+
+  <details class="howto">
+    <summary>Nasıl oynanır?</summary>
+    <ul>
+      <li>Önceki kelimenin son harfiyle başlayan yeni bir kelime yaz.</li>
+      <li>Süre dolarsa elenirsin. Daha önce yazılmış bir kelimeyi yazarsan uyarılırsın ama elenmezsin.</li>
+      <li>Kelime ğ ile bitiyorsa bir önceki harf geçerli olur.</li>
+      <li>Elenenler oyunu izlemeye devam eder. Son kalan kazanır.</li>
+    </ul>
+  </details>
+</main>
+
+<!-- Davet linkiyle gelenler -->
+<main id="join" class="screen" hidden>
+  <h1 class="wordmark" aria-label="WordChain"></h1>
+  <p class="tagline">Oda <b id="joinCode"></b> seni bekliyor.</p>
+  <form id="joinForm" class="card" autocomplete="off">
+    <h2>Odaya katıl</h2>
+    <div class="namerow">
+      <button type="button" class="avbtn" id="avJoin" aria-label="Avatarını seç"></button>
+      <div class="field">
+        <label for="nameJoin">Adın</label>
+        <input id="nameJoin" class="txt" type="text" maxlength="16" autocomplete="nickname" placeholder="Takma adın" required>
+      </div>
+    </div>
+    <p id="joinMsg" class="msg" role="status"></p>
+    <button class="btn green" type="submit">Katıl</button>
+  </form>
+</main>
+
+<!-- Bekleme salonu -->
+<main id="lobby" class="screen" hidden>
+  <section class="card pin">
+    <p class="lab">Oda kodu</p>
+    <p id="lbCode" class="code"></p>
+    <div class="invite">
+      <input id="inviteLink" class="txt" type="text" readonly aria-label="Davet linki">
+      <button id="copyBtn" class="btn small" type="button">Kopyala</button>
+      <button id="waBtn" class="btn small green share" type="button">WhatsApp</button>
+      <button id="shareBtn" class="btn small amber share" type="button" hidden>Linki paylaş</button>
+    </div>
+  </section>
+  <div id="lbSet" class="setchips"></div>
+  <ul id="lbPlayers" class="plist"></ul>
+  <p id="lbCount" class="hint"></p>
+  <div class="actions">
+    <button id="readyBtn" class="btn green" type="button" hidden>Hazırım</button>
+    <button id="startBtn" class="btn green" type="button" hidden>Maçı başlat</button>
+    <p id="startHint" class="hint"></p>
+    <button id="leaveBtn" class="btn ghost" type="button">Odadan çık</button>
+  </div>
+</main>
+
+<!-- Oyun -->
+<main id="game" class="screen" hidden>
+  <div class="topline"><span>Oda <b id="gmCode"></b></span><span id="gmCount"></span></div>
+  <ol id="stops" class="stops" aria-label="Oyuncular"></ol>
+
+  <div id="turnrow" class="turnrow">
+    <div id="ring" class="ring" aria-hidden="true">
+      <svg viewBox="0 0 84 84"><circle class="tr" cx="42" cy="42" r="36"/><circle id="pr" class="pr" cx="42" cy="42" r="36"/></svg>
+      <span id="num" class="num">45</span>
+    </div>
+    <div class="turntxt"><span id="turnBig" class="big"></span><span id="turnThen" class="then"></span></div>
+  </div>
+
+  <section class="card wordcard" aria-live="polite">
+    <p class="lab">Önceki kelime</p>
+    <div id="lastWord" class="tiles none">Henüz kelime yok</div>
+    <div id="lastBy" class="byline"></div>
+    <div id="needLine" class="needline"></div>
+    <p id="needSub" class="needsub"></p>
+  </section>
+
+  <ol id="feed" class="feed" aria-label="Yazılan kelimeler"></ol>
+
+  <form id="wordForm" class="dock" autocomplete="off">
+    <div class="dock-in">
+      <p id="dockMsg" class="dockmsg" role="status"></p>
+      <div id="dockRow" class="dockrow">
+        <span id="needBadge" class="badge idle">•</span>
+        <input id="wordInput" class="txt" type="text" maxlength="30" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Yeni kelime">
+        <button id="sendBtn" class="btn green" type="submit">Gönder</button>
+      </div>
+      <div id="watchBar" class="watch" hidden></div>
+    </div>
+  </form>
+</main>
+
+<!-- Geri sayım -->
+<div id="countdown" class="countdown" hidden>
+  <p class="cd-label">Hazır ol!</p>
+  <p id="cdNum" class="cd-num">3</p>
+  <div id="cdFirst" class="cd-first"></div>
+</div>
+
+<!-- Sonuç -->
+<section id="result" class="result" hidden>
+  <div class="result-in">
+    <h2 id="resTitle"></h2>
+    <p id="resSub" class="sub"></p>
+    <div id="podium" class="podium"></div>
+    <ol id="rank" class="rank"></ol>
+    <div class="actions">
+      <button id="rematchBtn" class="btn green" type="button" hidden>Tekrar oyna</button>
+      <p id="rematchWait" class="hint" hidden>Kurucunun yeni oyunu başlatması bekleniyor.</p>
+      <button id="leaveBtn2" class="btn ghost" type="button">Odadan çık</button>
+    </div>
+  </div>
+</section>
+
+<!-- Avatar seçici -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-head">
+      <h2 id="sheetTitle">Avatarını seç</h2>
+      <button id="sheetClose" class="btn small" type="button">Tamam</button>
+    </div>
+    <div id="avGrid" class="avgrid"></div>
+  </div>
+</div>
+
+
+<!-- Uygulama olarak ekle -->
+<section id="install" class="install" hidden>
+  <h2>Uygulama gibi kullan</h2>
+  <div id="installAndroid" hidden>
+    <button id="installBtn" class="btn white" type="button" hidden>Ana ekrana ekle</button>
+    <a id="apkBtn" class="btn white linkbtn" href="/downloads/WordChain.apk" download hidden>Android uygulamasını indir (APK)</a>
+    <p id="apkNote" class="hint" hidden>APK'yı indirdikten sonra açarken telefon "bilinmeyen kaynak" izni isteyebilir. Onaylaman yeterli.</p>
+  </div>
+  <ol id="installIos" class="steps" hidden>
+    <li>Safari'nin altındaki <b>Paylaş</b> düğmesine dokun.</li>
+    <li><b>Ana Ekrana Ekle</b>'yi seç.</li>
+    <li>Sağ üstte <b>Ekle</b>'ye bas.</li>
+  </ol>
+</section>
+
+<footer class="foot">
+  <p>Ücretsiz, reklamsız, kayıt gerektirmez.</p>
+  <p><a href="/credits.txt">Lisanslar ve kaynaklar</a></p>
+</footer>
+
+<canvas id="confetti" hidden></canvas>
+<div id="toast" class="toast" role="status" hidden></div>
+<p id="live" class="sr" aria-live="assertive"></p>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
