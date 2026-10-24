@@ -1,0 +1,34 @@
+words.txt hakkında
+
+words.txt, Zemberek-NLP projesinin kök kelime sözlüklerinden (master-dictionary.dict ve non-tdk.dict)
+üretildi. Kaynak: https://github.com/ahmetaa/zemberek-nlp
+
+Zemberek-NLP
+Copyright 2018 Ahmet A. Akın, Mehmet D. Akın
+Apache License, Version 2.0 ile lisanslıdır.
+Lisans metni: https://www.apache.org/licenses/LICENSE-2.0
+Projenin kendi lisans bildirimi bu klasörde ZEMBEREK-LICENSE.txt olarak duruyor.
+
+Yapılan değişiklikler:
+- Noktalama işaretleri, rakamlar ve özel isimler listeye alınmadı.
+- Her satırdaki kelime küçük harfe çevrildi (Türkçe kurallarıyla), etiketler atıldı.
+- Yalnızca Türkçe harflerden oluşan, 2 ile 30 harf arasındaki kelimeler tutuldu.
+- Kopyalar silindi ve liste alfabetik sıralandı.
+
+----------------------------------------------------------------------
+
+public/avatars klasöründeki hayvan çizimleri hakkında
+
+Çizimler Microsoft'un "Fluent Emoji" setinin düz (flat) stilinden alındı.
+Kaynak: https://github.com/microsoft/fluentui-emoji
+Lisans: MIT, Copyright (c) Microsoft Corporation.
+Lisans metni bu klasörde AVATAR-LICENSE.txt olarak duruyor.
+Çizimlere dokunulmadı; her biri ayrı bir .svg dosyası olarak kaydedildi.
+
+----------------------------------------------------------------------
+
+public/fonts klasöründeki yazı tipi hakkında
+
+Montserrat yazı tipi (değişken ağırlıklı sürüm), @fontsource-variable/montserrat paketinden alındı.
+Kaynak: https://github.com/JulietaUla/Montserrat
+Lisans: SIL Open Font License 1.1. Lisans metni bu klasörde FONT-LICENSE.txt olarak duruyor.
