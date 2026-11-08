@@ -1,6 +1,6 @@
 'use strict';
 // Sadece uygulama kabuğunu önbelleğe alır. Oyun verisi canlı bağlantıdan gelir, önbelleğe girmez.
-const CACHE = 'wordchain-v8';
+const CACHE = 'wordchain-v12';
 const SHELL = ['/style.css', '/app.js', '/sound.js', '/challenge.js', '/conquest.js', '/harita.json', '/icons/icon-192.png', '/fonts/montserrat-latin-wght-normal.woff2', '/fonts/montserrat-latin-ext-wght-normal.woff2'];
 
 self.addEventListener('install', (e) => {

@@ -9,10 +9,10 @@ const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 
-const PICK_MS = Number(process.env.CQ_PICK_MS) || 8000;
-const ANSWER_MS = Number(process.env.CQ_ANSWER_MS) || 15000;
-const REVEAL_MS = Number(process.env.CQ_REVEAL_MS) || 3200;
-const MAX_STEPS = 3;
+const PICK_MS = Number(process.env.CQ_PICK_MS) || 20000;
+const ANSWER_MS = Number(process.env.CQ_ANSWER_MS) || 30000;
+const REVEAL_MS = Number(process.env.CQ_REVEAL_MS) || 8000;
+const MAX_STEPS = 6;
 const MAX_ROUNDS = 45;
 const TARGETS = [10, 12, 15];
 const LEVELS = { easy: [0, 60, 40, 0], mix: [0, 40, 40, 20], hard: [0, 0, 40, 60] };
@@ -64,6 +64,7 @@ function freshState(cfg) {
     steps: [],
     owner: new Array(N).fill(null),
     picks: {},
+    locked: {},
     pickEndsAt: 0,
     endsAt: 0,
     stepStart: 0,
@@ -96,6 +97,7 @@ function shuffle(a) {
 }
 
 function startCities(k) {
+  if (process.env.CQ_TEST_ADJ) { const c = 34; return [c].concat(KOM[c].slice(0, k - 1)); } // yalnızca testler için
   const cand = [];
   for (let i = 0; i < N; i++) if (KOM[i].length >= 3) cand.push(i);
   for (const minD of [4, 3, 2]) {
@@ -144,11 +146,22 @@ function snapshot(room, viewer) {
   const stepGroups = (cq.phase === 'ask' || cq.phase === 'reveal') ? (cq.steps[cq.step] || []) : [];
   let me = null;
   if (viewer) {
-    me = { pick: cq.picks[viewer.id] === undefined ? -1 : cq.picks[viewer.id], gid: null, answered: false, skip: cq.skip[viewer.id] === cq.round };
+    me = { pick: cq.picks[viewer.id] === undefined ? -1 : cq.picks[viewer.id], gid: null, answered: false, ansI: -1, skip: cq.skip[viewer.id] === cq.round, locked: !!cq.locked[viewer.id] && cq.picks[viewer.id] === undefined, attackedBy: [] };
+    if (cq.phase === 'pick') {
+      for (const pid of Object.keys(cq.picks)) {
+        const c = cq.picks[pid];
+        if (cq.owner[c] === viewer.id) {
+          let e = me.attackedBy.find((x) => x.city === c);
+          if (!e) me.attackedBy.push(e = { city: c, by: [] });
+          e.by.push(room.players.findIndex((x) => x.id === pid));
+        }
+      }
+    }
     for (const g of stepGroups) {
       if (g.att.includes(viewer.id) || (g.def === viewer.id && !g.defAbsent)) {
         me.gid = g.id;
         me.answered = !!g.ans[viewer.id];
+        me.ansI = g.ans[viewer.id] ? g.ans[viewer.id].i : -1;
       }
     }
   }
@@ -220,6 +233,7 @@ function startRound(room) {
   if (room.status !== 'playing') return;
   cq.round++;
   cq.picks = {};
+  cq.locked = {};
   cq.steps = [];
   cq.step = 0;
   cq.reveal = null;
@@ -231,21 +245,33 @@ function startRound(room) {
   if (!elig.length) setTimer(room, 1200, () => endPick(room));
 }
 
+function maybeEarlyEnd(room) {
+  const cq = room.cq;
+  if (room.status !== 'playing' || cq.phase !== 'pick') return;
+  const elig = room.players.filter((x) => pickEligible(room, x) && x.ws && !cq.locked[x.id]);
+  if (Object.keys(cq.picks).length && elig.every((x) => cq.picks[x.id] !== undefined)) {
+    setTimer(room, 700, () => endPick(room));
+  }
+}
+
 function pick(room, p, city) {
   const cq = room.cq;
   if (room.status !== 'playing' || cq.phase !== 'pick') return;
   if (Date.now() > cq.pickEndsAt + 300) return;
   if (!pickEligible(room, p)) return api.send(p.ws, { t: 'reject', msg: cq.skip[p.id] === cq.round ? 'Bu tur oynayamazsın.' : 'Seçebileceğin il yok.' });
+  const cur = cq.picks[p.id];
+  if (cur === undefined && cq.locked[p.id]) return api.send(p.ws, { t: 'reject', msg: 'Sana saldırılıyor, savunmaya hazırlan.' });
+  if (cur !== undefined && cq.owner[cur] && city !== cur) return api.send(p.ws, { t: 'reject', msg: 'Saldırı kararını değiştiremezsin.' });
   if (city === -1) delete cq.picks[p.id];
   else {
     if (!Number.isInteger(city) || city < 0 || city >= N) return;
     if (!frontier(room, p).has(city)) return api.send(p.ws, { t: 'reject', msg: 'Sadece sınırındaki illeri seçebilirsin.' });
     cq.picks[p.id] = city;
+    // Saldırıya uğrayan, henüz seçmediyse seçim yapamaz: doğrudan savunmaya geçer.
+    const o = cq.owner[city];
+    if (o && cq.picks[o] === undefined) cq.locked[o] = true;
   }
-  const elig = room.players.filter((x) => pickEligible(room, x));
-  if (elig.length && elig.every((x) => cq.picks[x.id] !== undefined)) {
-    setTimer(room, 600, () => endPick(room));
-  }
+  maybeEarlyEnd(room);
   api.broadcast(room);
 }
 
@@ -434,7 +460,7 @@ function rematch(room, p) {
 }
 
 function flag(room, p, msg) {
-  const g = room.cq.steps.flat().find((x) => x.id === msg.gid);
+  const g = room.cq.steps.flat().find((x) => x.id === parseInt(msg.gid, 10));
   if (g) console.log('[SORU-BILDIRIMI] ' + room.code + ' | ' + g.q.cat + ' | ' + g.q.t + ' | ' + g.q.o.join(' / ') + ' | doğru=' + g.q.a);
 }
 
@@ -447,6 +473,7 @@ function leave(room, p, removePlayer) {
     const rest = active(room);
     if (room.hostId === p.id && rest.length) room.hostId = rest[0].id;
     if (rest.length < 2) return finish(room, rest.map((x) => x.id), p.name);
+    if (cq.phase === 'pick') maybeEarlyEnd(room);
     if (cq.phase === 'ask') {
       for (const g of cq.steps[cq.step]) if (participants(g).includes(p.id) && !g.ans[p.id]) g.ans[p.id] = { i: -1, ms: ANSWER_MS, off: true };
       checkAllAnswered(room);
@@ -471,4 +498,8 @@ function act(room, p, msg) {
   }
 }
 
-module.exports = { init, parseConfig, setup, snapshot, start, rematch, leave, act };
+function disconnected(room) {
+  if (room.status === 'playing' && room.cq.phase === 'pick') maybeEarlyEnd(room);
+}
+
+module.exports = { disconnected, init, parseConfig, setup, snapshot, start, rematch, leave, act };

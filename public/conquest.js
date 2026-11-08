@@ -243,7 +243,8 @@
     if (!mainMap) { mainMap = buildMap($('cqMap'), true); }
     var fr = {};
     var picking = cq.phase === 'pick' && cq.me && myIdx >= 0 && !playerMe().left;
-    var canPick = picking && !playerMe().skip;
+    var atkLocked = !!(cq.me && cq.me.pick >= 0 && cq.owner[cq.me.pick] >= 0 && cq.owner[cq.me.pick] !== myIdx);
+    var canPick = picking && !playerMe().skip && !(cq.me && cq.me.locked) && !atkLocked;
     if (canPick) fr = myFrontier(s, myIdx);
     var flash = {};
     var lbl = {};
@@ -261,10 +262,11 @@
 
     // görünüm: yakınlaştırma
     var box = null;
-    if (zoomed && myIdx >= 0 && (cq.phase === 'pick' || cq.phase === 'ask' || cq.phase === 'reveal')) {
+    if (zoomed && myIdx >= 0 && (cq.phase === 'pick' || cq.phase === 'ask')) {
       var ids = [];
       cq.owner.forEach(function (o, i) { if (o === myIdx) ids.push(i); });
       if (cq.phase === 'pick') Object.keys(fr).forEach(function (k) { ids.push(+k); });
+      if (cq.phase === 'pick' && cq.me) cq.me.attackedBy.forEach(function (e) { ids.push(e.city); lbl[e.city] = true; });
       cq.groups.forEach(function (g) { if (g.att.indexOf(WC.me()) >= 0 || g.def === WC.me()) ids.push(g.city); });
       if (ids.length) {
         box = { minx: 1e9, miny: 1e9, maxx: -1e9, maxy: -1e9 };
@@ -277,7 +279,7 @@
     }
     setView(mainMap, box);
     $('cqZoom').textContent = box ? 'Tüm harita' : 'Bölgeme yakınlaş';
-    $('cqZoom').hidden = myIdx < 0 || (cq.phase !== 'pick' && cq.phase !== 'ask' && cq.phase !== 'reveal');
+    $('cqZoom').hidden = myIdx < 0 || (cq.phase !== 'pick' && cq.phase !== 'ask');
     if (!box) lbl = (cq.phase === 'pick' && canPick) ? lbl : lbl;
     paintMap(mainMap, cq.owner, { fr: fr, pk: pk, fl: flash, lbl: box || cq.phase !== 'pick' ? lbl : {} });
 
@@ -324,8 +326,23 @@
       if (!meP || meP.left) { head('İzliyorsun', cq.pickEndsAt); panel.appendChild(el('p', 'sub', cnt + ' kişi il seçti.')); return; }
       if (skipped) { head('Bu tur pasın', cq.pickEndsAt); panel.appendChild(el('p', 'sub', 'Yanlış saldırının cezası: bu tur il seçemezsin. Diğerlerini izle.')); return; }
       if (!frIds.length) { head('Bu tur seçeneğin yok', cq.pickEndsAt); panel.appendChild(el('p', 'sub', 'Çevrende alınabilecek il kalmadı.')); return; }
-      head('Hangi ili alacaksın?', cq.pickEndsAt);
-      panel.appendChild(el('p', 'sub', 'Parlayan komşu illere haritadan dokun ya da aşağıdan seç. Süre bitmeden değiştirebilirsin.'));
+      if (cq.me.locked || (cq.me.attackedBy.length && cq.me.pick < 0)) {
+        head('Sana saldırılıyor!', cq.pickEndsAt);
+        panel.appendChild(el('p', 'sub', 'Saldırıya uğradığın için bu tur il seçemezsin. Diğerlerinin seçimi bitince soru gelecek, savunmaya hazırlan.'));
+        var al = el('div', 'rvlist');
+        cq.me.attackedBy.forEach(function (e) {
+          var box = el('div', 'rvline pen');
+          box.appendChild(el('span', 'mark', '⚔'));
+          box.appendChild(el('b', null, e.by.map(function (i) { return s.players[i].name; }).join(' ve ') + ' → ' + ilName(e.city)));
+          al.appendChild(box);
+        });
+        panel.appendChild(al);
+        return;
+      }
+      var atkLock = cq.me.pick >= 0 && cq.owner[cq.me.pick] >= 0;
+      head(atkLock ? 'Saldırı kararı verildi' : 'Hangi ili alacaksın?', cq.pickEndsAt);
+      panel.appendChild(el('p', 'sub', atkLock ? ilName(cq.me.pick) + ' iline saldıracaksın. Saldırı kararı değiştirilemez, diğerleri bekleniyor.' : 'Parlayan komşu illere haritadan dokun ya da aşağıdan seç. Boş ili süre bitmeden değiştirebilirsin. Rakibin iline saldırmayı seçersen geri dönemezsin.'));
+      if (cq.me.attackedBy.length) panel.appendChild(el('p', 'sub', '⚔ ' + cq.me.attackedBy.map(function (e) { return e.by.map(function (i) { return s.players[i].name; }).join(' ve ') + ' sana saldırıyor (' + ilName(e.city) + ')'; }).join(', ') + ' · savunman için soru gelecek.'));
       var list = el('div', 'frlist');
       frIds.sort(function (a, b) { return ilName(a).localeCompare(ilName(b), 'tr'); });
       frIds.forEach(function (i) {
@@ -334,6 +351,7 @@
         b.type = 'button';
         b.style.setProperty('--pc', col(o));
         b.setAttribute('aria-pressed', cq.me.pick === i ? 'true' : 'false');
+        if (atkLock) b.disabled = true;
         var dot = el('span', 'dot'); if (o >= 0) dot.style.background = col(o);
         b.appendChild(dot);
         var tx = el('span');
@@ -377,7 +395,8 @@
           else if (myRes && myRes.i === i) b.classList.add('bad');
         } else {
           b.disabled = !mg || myAnswered || (meP && meP.left);
-          if (seen.myAns === i || (myAnswered && seen.myAns === i)) b.classList.add('sel');
+          if (cq.me && cq.me.ansI === i) b.classList.add('sel');
+          else if (seen.myAns === i) b.classList.add('sel');
           b.addEventListener('click', function () {
             if (b.disabled) return;
             seen.myAns = i;
@@ -409,7 +428,7 @@
       }
       var fb = el('button', 'qflag', 'Soru hatalı mı?');
       fb.type = 'button';
-      fb.addEventListener('click', function () { WC.send({ t: 'flag', q: show.id }); WC.toast('Bildirimin için teşekkürler.'); fb.hidden = true; });
+      fb.addEventListener('click', function () { WC.send({ t: 'flag', gid: show.id }); WC.toast('Bildirimin için teşekkürler.'); fb.hidden = true; });
       panel.appendChild(fb);
       return;
     }

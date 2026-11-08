@@ -240,8 +240,9 @@
       bidline.appendChild(w);
       var turnP = who(s, ch.turnId);
       status.className = 'cgstat' + (myTurn ? ' mine' : '');
+      var capped = myTurn && meP.items.length < s.settings.picks && meP.money - (ch.bid + 1) < s.settings.picks - meP.items.length - 1;
       status.textContent = myTurn
-        ? 'Sıra sende. Bırakırsan ürün ' + (bidder && bidder.id === me ? 'sana' : (bidder ? bidder.name + "'a" : '')) + ' ' + tl(ch.bid) + "'ye gider."
+        ? (capped ? 'Daha fazla artıramazsın: kalan ürünlerin için paranı ayırman gerekiyor. ' : '') + 'Sıra sende. Bırakırsan ürün ' + (bidder && bidder.id === me ? 'sana' : (bidder ? bidder.name + "'a" : '')) + ' ' + tl(ch.bid) + "'ye gider."
         : (turnP ? turnP.name + ' karar veriyor…' : '');
     } else if (ch.phase === 'sold' && ch.sold) {
       var buyer = who(s, ch.sold.toId);
@@ -267,7 +268,8 @@
     var dock = $('cgDock');
     dock.hidden = !(s.status === 'playing' && (ch.phase === 'bid' || ch.phase === 'sold'));
     var raiseTo = ch.bid + 1;
-    var canRaise = myTurn && meP.items.length < s.settings.picks && meP.money >= raiseTo;
+    var slotsAfter = s.settings.picks - meP.items.length - 1;
+    var canRaise = myTurn && meP.items.length < s.settings.picks && meP.money - raiseTo >= slotsAfter;
     $('cgRaise').disabled = !canRaise;
     $('cgPass').disabled = !myTurn;
     $('cgRaiseTo').textContent = ch.phase === 'bid' ? tl(raiseTo) + "'ye çıkar" : '';

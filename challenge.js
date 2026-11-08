@@ -90,8 +90,13 @@ function setup(room, cfg) {
 function opponent(room, p) { return room.players.find((x) => x !== p); }
 function itemsOf(p) { return p.items || (p.items = []); }
 function moneyOf(p) { return typeof p.money === 'number' ? p.money : START_MONEY; }
-function eligible(room, p) { return itemsOf(p).length < room.ch.cfg.picks && moneyOf(p) >= 1; }
-function canRaise(room, p, bid) { return itemsOf(p).length < room.ch.cfg.picks && moneyOf(p) >= bid + 1; }
+// Kalan her ürün hakkı için en az 1 TL ayrılır; böylece kimse paraya takılıp ürününü tamamlayamaz hale gelmez.
+function slotsLeft(room, p) { return room.ch.cfg.picks - itemsOf(p).length; }
+function eligible(room, p) { return slotsLeft(room, p) > 0 && moneyOf(p) >= slotsLeft(room, p); }
+function canRaise(room, p, bid) {
+  const left = slotsLeft(room, p);
+  return left > 0 && moneyOf(p) - (bid + 1) >= left - 1;
+}
 
 function topicInfo(room) {
   const ch = room.ch;
@@ -254,7 +259,7 @@ function pass(room, p, timedOut) {
 function raise(room, p) {
   const ch = room.ch;
   if (room.status !== 'playing' || ch.phase !== 'bid' || ch.turnId !== p.id) return;
-  if (!canRaise(room, p, ch.bid)) return api.send(p.ws, { t: 'reject', msg: itemsOf(p).length >= ch.cfg.picks ? 'Ürün hakkın doldu.' : 'Teklifi artıracak paran yok.' });
+  if (!canRaise(room, p, ch.bid)) return api.send(p.ws, { t: 'reject', msg: itemsOf(p).length >= ch.cfg.picks ? 'Ürün hakkın doldu.' : 'Kalan ürünlerin için en az 1 TL ayırman gerekiyor.' });
   ch.bid += 1;
   ch.bidderId = p.id;
   const other = opponent(room, p);

@@ -4,5 +4,5 @@ Arkadaşlarla oynanan, ücretsiz ve reklamsız online oyunlar: Kelime Zinciri (2
 
 - Çalıştırma: `npm install`, ardından `npm start` (http://localhost:3000)
 - Yayınlama ve telefona ekleme: `KURULUM.md`
-- Ortam değişkenleri: `PORT` (3000), `MIN_TURN_S` (Kelime Zinciri en kısa düşünme süresi, 30), `MIN_DECIDE_S` (20 TL Challenge en kısa karar süresi, 10), `SOLD_DELAY_MS` (satış ekranı süresi, 2600), `START_DELAY_MS` (geri sayım, 3500), Veni Vidi Vici için `CQ_PICK_MS` (il seçme süresi, 8000), `CQ_ANSWER_MS` (soru süresi, 15000), `CQ_REVEAL_MS` (sonuç gösterimi, 3200)
+- Ortam değişkenleri: `PORT` (3000), `MIN_TURN_S` (Kelime Zinciri en kısa düşünme süresi, 30), `MIN_DECIDE_S` (20 TL Challenge en kısa karar süresi, 10), `SOLD_DELAY_MS` (satış ekranı süresi, 2600), `START_DELAY_MS` (geri sayım, 3500), Veni Vidi Vici için `CQ_PICK_MS` (il seçme süresi, 20000), `CQ_ANSWER_MS` (soru süresi, 30000), `CQ_REVEAL_MS` (sonuç gösterimi, 8000)
 - Lisanslar: `public/credits.html`

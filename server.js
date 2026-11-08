@@ -479,6 +479,7 @@ wss.on('connection', (ws) => {
     const { room, p } = c;
     if (p.ws !== ws) return;
     p.ws = null;
+    if (room.game === 'conquest') conquest.disconnected(room, p);
     if (room.status === 'lobby') {
       p.removeTimer = setTimeout(() => {
         if (!p.ws && room.status === 'lobby') removePlayer(room, p);
